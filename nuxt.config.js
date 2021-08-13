@@ -31,6 +31,7 @@ export default {
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
+    '@plugins/filters.js'
   ],
 
   // Auto import components: https://go.nuxtjs.dev/config-components
@@ -47,15 +48,54 @@ export default {
   // Modules: https://go.nuxtjs.dev/config-modules
   modules: [
     // https://go.nuxtjs.dev/axios
-    '@nuxtjs/axios'
+    '@nuxtjs/axios',
+    '@nuxtjs/auth'
   ],
 
+  auth: {
+    strategies: {
+      local: {
+        resetOnError: true,
+        tokenType: 'Token',
+        token: {
+          global: true,
+          required: true
+        },
+        user: {
+          property: 'username'
+          // autoFetch: true
+        },
+        endpoints: {
+          login: {
+            url: 'auth/login/',
+            method: 'post',
+            propertyName: 'auth_token'
+          },
+          logout: {
+            url: 'auth/logout/',
+            method: 'post'
+          },
+          user: {
+            url: 'auth/user/',
+            method: 'post',
+            propertyName: false
+          }
+        }
+      }
+    }
+  },
+  router: {
+    middleware: ['auth']
+  },
+
   // Axios module configuration: https://go.nuxtjs.dev/config-axios
-  axios: {},
+  axios: {
+    baseURL: 'http://localhost:8000/api'
+  },
 
   // Vuetify module configuration: https://go.nuxtjs.dev/config-vuetify
   vuetify: {
-    customVariables: ['~/assets/variables.scss'],
+    customVariables: ['@/assets/variables.scss'],
     theme: {
       dark: false,
       themes: {
@@ -67,7 +107,7 @@ export default {
           warning: colors.amber.base,
           error: colors.deepOrange.accent4,
           success: colors.green.accent3
-        },
+        }
       }
     }
   },
