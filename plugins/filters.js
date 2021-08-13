@@ -11,3 +11,12 @@ Vue.filter('formatDate', (value) => {
     hour12: false
   })
 })
+
+Vue.filter('emojiFormat', (value) => {
+  const regexExp = /^(\u00A9|\u00AE|[\u2000-\u3300]|\uD83C[\uD000-\uDFFF]|\uD83D[\uD000-\uDFFF]|\uD83E[\uD000-\uDFFF])$/
+  if (regexExp.test(value)) {
+    return 32
+  } else {
+    return
+  }
+})
