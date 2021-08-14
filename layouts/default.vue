@@ -7,17 +7,43 @@
       app
     >
       <v-list>
+        <v-autocomplete
+          v-model="select"
+          :loading="loading"
+          :items="items"
+          :search-input.sync="search"
+          cache-items
+          class="ma-6"
+          flat
+          hide-no-data
+          hide-details
+          label="Search chat"
+          :append-outer-icon="select ? 'mdi-plus' : ''"
+          @click:append-outer="chatTitle"
+        />
         <v-list-item
-          v-for="(chat, i) in chats"
-          :key="i"
+          v-for="(chat, index) in chats"
+          :key="index"
           :to="chat.id"
           router
           exact
         >
-          <v-list-item-action>
-            <v-icon>mdi-apps</v-icon>
+          <v-list-item-action
+            @click="removeChat(chat.id, index)"
+          >
+            <v-icon
+              v-if="chat.creator.id === $auth.user.id"
+              @click="removeChat(chat.id, index)"
+            >
+              mdi-minus-circle
+            </v-icon>
+            <v-icon
+              v-else
+              @click="exitChat(chat.id, index)"
+            >
+              mdi-arrow-left
+            </v-icon>
           </v-list-item-action>
-
           <v-list-item-content>
             <v-list-item-title v-text="chat.title" />
           </v-list-item-content>
@@ -28,7 +54,7 @@
           v-model="dialog"
           width="500"
         >
-          <template v-slot:activator="{ on, attrs }">
+          <template #activator="{ on, attrs }">
             <v-btn
               v-bind="attrs"
               v-on="on"
@@ -39,26 +65,21 @@
 
           <v-card>
             <v-card-title class="text-h5 grey lighten-2">
-              Add or search chat
+              Create new chat
             </v-card-title>
-            <v-autocomplete
-              v-model="select"
-              :loading="loading"
-              :items="items"
-              :search-input.sync="search"
-              cache-items
-              class="mx-4"
-              flat
-              hide-no-data
-              hide-details
-              label="Search chat"
-            />
+            <v-card-text>
+              <v-text-field
+                v-model="chatTitle"
+                class="ma-8 mx-4 "
+                flat
+                label="Create chat"
+              ></v-text-field>
+            </v-card-text>
             <v-card-actions>
               <v-spacer />
               <v-btn
-                color="red"
                 text
-                @click="dialog = false; addChat()"
+                @click="createChat"
               >
                 Add
               </v-btn>
@@ -93,6 +114,10 @@
 
 <script>
 export default {
+  asyncData ({ params }) {
+    const currentChat = params.chat
+    return { currentChat }
+  },
   data () {
     return {
       drawer: false,
@@ -101,11 +126,12 @@ export default {
       title: 'Symfall',
       currentChat: null,
       dialog: false,
+      chatTitle: '',
       select: false,
       loading: false,
       items: [],
       search: null,
-      states: []
+      states: [],
     }
   },
   watch: {
@@ -120,22 +146,40 @@ export default {
     async logout () {
       await this.$auth.logout()
     },
+    async removeChat (chatId, index) {
+      await this.$axios.$delete(`chat/${chatId}/`)
+      this.chats.splice(index, 1)
+      if (chatId === this.currentChat) {
+        await this.$router.push('Home')
+      }
+    },
+    async createChat () {
+      const addedChat = await this.$axios.$post('chat/', {
+        title: this.chatTitle,
+        creator: this.$auth.user.id
+      })
+      this.chats.unshift(addedChat)
+      this.dialog = false
+    },
     async addChat () {
       const response = await this.$axios.$get('chat/', {
         params: {
           title: this.select
         }
       })
-      let chat = response.results[0]
+      const chat = response.results[0]
       chat.creator = chat.creator.id
       chat.invited.push(this.$auth.user.id)
       const addedChat = await this.$axios.$put(`chat/${chat.id}/`, chat)
-      this.chats.push(addedChat)
+      this.chats.unshift(addedChat)
+      this.select = ''
+      this.items = []
     },
     async fetchChats () {
       const response = await this.$axios.$get('chat/', {
         params: {
-          invited__in: this.$auth.user.id
+          invited__in__or: this.$auth.user.id,
+          creator__or: this.$auth.user.id
         }
       })
       this.chats = response.results
@@ -143,7 +187,7 @@ export default {
     async querySelections (value) {
       this.loading = true
       // Simulated ajax query
-      const response = await this.$axios.$get('chat/', {
+      const response = await this.$axios.$get('chat/search/', {
         params: {
           search: value
         }

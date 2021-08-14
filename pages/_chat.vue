@@ -4,7 +4,7 @@
   >
     <v-row
       ref="chat"
-      class="d-flex justify-center mb-6 chat"
+      class="d-flex justify-center align-end mb-6 chat"
     >
       <v-col
         v-for="(message, index) in messages"
@@ -26,7 +26,9 @@
                 {{ message.created_at | formatDate }}
               </div>
               <v-list-item-title />
-              <p>{{ message.message }}</p>
+              <p>
+                {{ message.message }}
+              </p>
               <v-img
                 v-for="file in message.file_set"
                 :key="file.id"
@@ -87,70 +89,86 @@
       fixed
     >
       <v-col
-        cols="6"
+        cols="8"
       >
+        <v-menu
+          v-model="emojiMenu"
+          top
+          fixed
+          offset-y
+          :close-on-content-click="false"
+        >
+          <template #activator="{ on }">
+            <v-icon
+              v-on="on"
+            />
+          </template>
+          <VEmojiPicker @select="selectEmoji" />
+        </v-menu>
         <v-textarea
+          id="textareaField"
           v-model="message"
-          name="input-7-4"
+          :append-outer-icon="message ? 'mdi-send' : 'mdi-file'"
+          :prepend-icon="icon"
           rows="3"
           label="Message"
+          type="text"
+          autofocus
+          @click:append="toggleMarker"
+          @click:append-outer="putMessage"
+          @click:prepend="emojiMenu = !emojiMenu"
+          @click:clear="clearMessage"
           @keydown.prevent.enter="putMessage"
         />
-      </v-col>
-      <v-col
-        cols="1"
-      >
-        <v-btn
-          fab
-          dark
-          color="red lighten-2"
-          @click="putMessage"
-        >
-          <v-icon>
-            mdi-send
-          </v-icon>
-        </v-btn>
-        <label for="file">
-          <v-btn
-            fab
-            dark
-            color="red lighten-2"
-            @click="postFile"
-          >
-            <input
-              id="file"
-              ref="file"
-              type="file"
-              style="display:none"
-              @change="handleFileUpload()"
-            >
-            <v-icon>
-              mdi-file
-            </v-icon>
-          </v-btn>
-        </label>
       </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script>
+import { VEmojiPicker } from 'v-emoji-picker'
+
 export default {
+  components: {
+    VEmojiPicker
+  },
   asyncData ({ params }) {
     const currentChat = params.chat
     return { currentChat }
   },
   data: () => ({
+    emojiMenu: false,
+    data: '',
     messages: [],
     message: '',
+    marker: true,
+    iconIndex: 0,
+    icons: [
+      'mdi-emoticon',
+      'mdi-emoticon-cool',
+      'mdi-emoticon-dead',
+      'mdi-emoticon-excited',
+      'mdi-emoticon-happy',
+      'mdi-emoticon-neutral',
+      'mdi-emoticon-sad',
+      'mdi-emoticon-tongue'
+    ],
     currentChat: null,
     removeNotify: false
   }),
+  computed: {
+    icon () {
+      return this.icons[this.iconIndex]
+    }
+  },
   async mounted () {
     await this.fetchMessages()
     this.scrollDown()
   },
   methods: {
+    selectEmoji (emoji) {
+      this.message += emoji.data
+    },
     scrollDown () {
       this.$refs.chat.scrollTop = this.$refs.chat.scrollHeight
     },
@@ -204,6 +222,26 @@ export default {
         }
       }
     },
+    toggleMarker () {
+      this.marker = !this.marker
+    },
+    sendMessage () {
+      this.resetIcon()
+      this.clearMessage()
+    },
+    clearMessage () {
+      this.message = ''
+    },
+    resetIcon () {
+      this.iconIndex = 0
+    },
+    changeIcon () {
+      // this.iconIndex === this.icons.length - 1
+      //   ? this.iconIndex = 0
+      //   : this.iconIndex++
+      this.$refs.emojiMenu.click()
+      // this.$ref.emojiMenu.click()
+    },
     /*
         Submits the file to the server
       */
@@ -211,29 +249,29 @@ export default {
       /*
               Initialize the form data
           */
-      let formData = new FormData();
+      const formData = new FormData()
 
       /*
           Add the form data we need to submit
       */
-      formData.append('file', this.file);
+      formData.append('file', this.file)
 
       /*
         Make the request to the POST /single-file URL
       */
-      axios.post( '/single-file',
+      axios.post('/single-file',
         formData,
         {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         }
-      ).then(function(){
-        console.log('SUCCESS!!');
+      ).then(function () {
+        console.log('SUCCESS!!')
       })
-        .catch(function(){
-          console.log('FAILURE!!');
-        });
+        .catch(function () {
+          console.log('FAILURE!!')
+        })
     },
 
     /*
@@ -248,7 +286,7 @@ export default {
 
 <style>
 .chat {
-  height: calc(100vh - 270px); overflow-y: scroll
+  height: calc(100vh - 294px); overflow-y: scroll
 }
 .chat::-webkit-scrollbar {
   width: 5px;

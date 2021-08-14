@@ -71,9 +71,6 @@ export default {
           password: this.password
         }
       })
-      // const user = await this.$auth.fetchUser()
-      // console.log(user)
-      // this.$auth.loggedIn = true
     }
   }
 }
